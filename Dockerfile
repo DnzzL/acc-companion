@@ -3,7 +3,7 @@ FROM python:3.7-slim
 WORKDIR /src
 
 RUN apt-get update \
-    && apt-get install -y build-essential python3-dev libblas3 liblapack3 liblapack-dev libblas-dev gfortran
+    && apt-get install -y build-essential python3-dev libblas3 liblapack3 liblapack-dev libblas-dev gfortran curl
 
 # Create 3.7-python virtualenv 
 RUN pip install --upgrade pip 
