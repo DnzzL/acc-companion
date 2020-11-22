@@ -13,7 +13,7 @@ RUN pip install --upgrade pip \
 COPY . /src
 
 # Install dependencies
-RUN poetry config settings.virtualenvs.create false
+RUN poetry config virtualenvs.create false
 RUN poetry install --no-interaction --no-dev
 
 CMD poetry run streamlit run --server.enableCORS false --server.port $PORT app.py
