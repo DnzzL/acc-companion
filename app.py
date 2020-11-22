@@ -4,7 +4,7 @@ from datetime import timedelta, datetime, date, time
 from helpers import *
 import pandas as pd
 
-st.sidebar.title("Assetto Corsa Competizione companion")
+st.sidebar.title("Assetto Corsa Competizione companion app")
 
 tools = ["Fuel calculator", "Endurance Stint Planner"]
 
