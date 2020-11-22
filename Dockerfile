@@ -7,13 +7,13 @@ RUN apt-get update \
 
 # Create 3.7-python virtualenv 
 RUN pip install --upgrade pip \
-    && pip install poetry==0.12.17
+    && pip install poetry
 
 # Copy source code
 COPY . /src
 
 # Install dependencies
 RUN poetry config settings.virtualenvs.create false
-RUN poetry install --no-interaction
+RUN poetry install --no-interaction --no-dev
 
 CMD poetry run streamlit run --server.enableCORS false --server.port $PORT app.py
