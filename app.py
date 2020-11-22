@@ -11,12 +11,15 @@ tools = ["Fuel calculator", "Endurance Stint Planner"]
 tool = st.sidebar.selectbox("Tools", tools)
 
 if tool == tools[0]:
-    race_length = st.number_input(f"Race length in minutes", value=0, format="%d")
+    race_length = st.number_input(f"Race length in minutes", value=0)
+    fuel_tank_size = st.number_input(
+        "Fuel tank size in liters", value=0, format="%d", step=1
+    )
     fuel_consumption = st.number_input("Fuel consumption in liters", step=0.1)
     pace = st.number_input(f"Average pace in minutes", step=0.1)
 
     if race_length != 0 and fuel_consumption != 0 and pace != 0:
-        race_length_in_seconds = race_length * 60
+        race_length_in_seconds = decrease_time_unit(race_length)
         pace_in_seconds = decrease_time_unit(pace)
         fuel_with_formation_lap = compute_fuel_to_add(
             race_length_in_seconds, pace_in_seconds, fuel_consumption
@@ -24,34 +27,47 @@ if tool == tools[0]:
         fuel_without_formation_lap = compute_fuel_to_add(
             race_length_in_seconds, pace_in_seconds, fuel_consumption, False
         )
-        st.header(
+        nb_stints = ceil(fuel_with_formation_lap / fuel_tank_size)
+        st.write(
+            f"You'll need {fuel_with_formation_lap}L to cover {ceil(compute_expected_laps(race_length_in_seconds, pace_in_seconds))} laps"
+        )
+        fuel_result = (
             f"You should add {fuel_with_formation_lap}L with a formation lap \
              or {fuel_without_formation_lap}L without"
+            if nb_stints == 1
+            else f"You should use on average {ceil(fuel_without_formation_lap / nb_stints)}L for each  of your {nb_stints} stints \
+            or {nb_stints - 1} stints of {fuel_tank_size}L and {fuel_without_formation_lap % fuel_tank_size}L for the last stint"
         )
-        st.write(
+
+        st.header(fuel_result)
+        st.text(
             """
             The number of lap is estimated as the length of the stint divided by the average pace, rounded up.
-            The fuel to add is the fuel consumption per lap times the number of expected laps + 3% of uncertainty, rounded up.
+            The fuel to add is the fuel consumption per lap times the number of expected laps + 2% of uncertainty, rounded up.
             An extra lap is added in case of formation lap.
         """
         )
 
 if tool == tools[1]:
-    col1, col2, col3 = st.beta_columns(3)
+    col1, col2 = st.beta_columns(2)
     with col1:
-        start_of_race = st.time_input(f"Start of race")
+        race_length = st.number_input(f"Length in hours")
     with col2:
-        race_length = st.number_input(f"Length in hours", value=0, format="%d", step=1)
-    with col3:
         stint_length = st.number_input(
             f"Stint length in minutes", value=0, format="%d", step=1
         )
-    col1, col2 = st.beta_columns(2)
+    col1, col2, col3 = st.beta_columns(3)
     with col1:
-        fuel_consumption = st.number_input("Fuel in liters", step=0.1)
+        fuel_tank_size = st.number_input(
+            "Fuel tank size in liters", value=0, format="%d", step=1
+        )
     with col2:
+        fuel_consumption = st.number_input(
+            "Fuel consumption in liters per lap", step=0.1
+        )
+    with col1:
         pit_stop_time_lost = st.number_input(
-            "Pit Stop time in seconds", value=50, format="%d", step=1
+            "Time lost with pit Stop in seconds", value=50, format="%d", step=1
         )
 
     number_drivers = st.number_input("Number of drivers", value=0, format="%d", step=1)
@@ -67,7 +83,7 @@ if tool == tools[1]:
     drivers_sorted = list(sorted(drivers.keys(), key=lambda x: drivers[x]["pace"]))
 
     if race_length != 0 and fuel_consumption != 0 and pace != 0 and stint_length != 0:
-        race_length_in_seconds = race_length * 3600
+        race_length_in_seconds = decrease_time_unit(decrease_time_unit(race_length))
         max_stint_length_in_seconds = decrease_time_unit(stint_length)
         names = []
         fuels = []
@@ -84,14 +100,14 @@ if tool == tools[1]:
             stint_length_in_seconds = (
                 min(
                     max_stint_length_in_seconds - pit_stop_time_lost,
-                    (((120 - fuel_consumption) // fuel_consumption) - 1)
+                    (((fuel_tank_size - fuel_consumption) // fuel_consumption) - 1)
                     * drivers[driver]["pace"]
                     - pit_stop_time_lost,
                 )
                 if stint_number == 0
                 else min(
                     max_stint_length_in_seconds - pit_stop_time_lost,
-                    ((120 // fuel_consumption) - 1) * drivers[driver]["pace"]
+                    ((fuel_tank_size // fuel_consumption) - 1) * drivers[driver]["pace"]
                     - pit_stop_time_lost,
                 )
             )
@@ -141,12 +157,12 @@ if tool == tools[1]:
                 "Fuel": fuels,
             }
         )
-        st.table(stints)
+        st.dataframe(stints)
 
         st.write(
             """
             The number of lap is estimated as the length of the stint divided by the average pace, rounded up.
-            The fuel to add is the fuel consumption per lap times the number of expected laps + 3% of uncertainty, rounded up.
+            The fuel to add is the fuel consumption per lap times the number of expected laps + 2% of uncertainty, rounded up.
             An extra lap is added in case of formation lap.
         """
         )
