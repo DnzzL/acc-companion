@@ -3,11 +3,11 @@ FROM python:3.7-slim
 WORKDIR /src
 
 RUN apt-get update \
-    && apt-get install -y build-essential python3-dev libblas3 liblapack3 liblapack-dev libblas-dev gfortran curl
+    && apt-get install -y build-essential python3-dev libblas3 liblapack3 liblapack-dev libblas-dev gfortran
 
 # Create 3.7-python virtualenv 
-RUN pip install --upgrade pip 
-RUN curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python
+RUN pip install --upgrade pip \
+    && pip install poetry cleo tomlkit jsonschema pyparsing keyring pkginfo cachecontrol cachy html5lib lockfile
 
 # Copy source code
 COPY . /src
