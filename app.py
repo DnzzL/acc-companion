@@ -11,25 +11,47 @@ tools = ["Fuel calculator", "Endurance Stint Planner"]
 tool = st.sidebar.selectbox("Tools", tools)
 
 if tool == tools[0]:
-    race_length = st.number_input(f"Race length in minutes", value=0)
+    st.write("Race Length")
+    col1, col2, col3 = st.beta_columns(3)
+    with col1:
+        race_length_hours = st.number_input(f"hours", key="race-hours", value=0)
+    with col2:
+        race_length_minutes = st.number_input(f"minutes", key="race-minutes", value=0)
+    with col3:
+        race_length_seconds = st.number_input(f"seconds", key="race-seconds", value=0)
+    st.write("Fuel")
     fuel_tank_size = st.number_input(
         "Fuel tank size in liters", value=0, format="%d", step=1
     )
     fuel_consumption = st.number_input("Fuel consumption in liters", step=0.1)
-    pace = st.number_input(f"Average pace in minutes", step=0.1)
+    st.write("Pace")
+    col1, col2 = st.beta_columns(2)
+    with col1:
+        pace_minutes = st.number_input(f"minutes", key="pace-minutes", value=0)
+    with col2:
+        pace_seconds = st.number_input(f"seconds", key="pace-seconds", value=0)
 
-    if race_length != 0 and fuel_consumption != 0 and pace != 0:
-        race_length_in_seconds = decrease_time_unit(race_length)
-        pace_in_seconds = decrease_time_unit(pace)
+    if (
+        race_length_hours + race_length_minutes + race_length_seconds > 0
+        and fuel_consumption > 0
+        and pace_minutes + pace_seconds > 0
+    ):
+        total_race_length_in_seconds = (
+            3600 * race_length_hours + 60 * race_length_minutes + race_length_seconds
+        )
+        total_pace_pace_in_seconds = 60 * pace_minutes + pace_seconds
         fuel_with_formation_lap = compute_fuel_to_add(
-            race_length_in_seconds, pace_in_seconds, fuel_consumption
+            total_race_length_in_seconds, total_pace_pace_in_seconds, fuel_consumption
         )
         fuel_without_formation_lap = compute_fuel_to_add(
-            race_length_in_seconds, pace_in_seconds, fuel_consumption, False
+            total_race_length_in_seconds,
+            total_pace_pace_in_seconds,
+            fuel_consumption,
+            False,
         )
         nb_stints = ceil(fuel_with_formation_lap / fuel_tank_size)
         st.write(
-            f"You'll need {fuel_with_formation_lap}L to cover {ceil(compute_expected_laps(race_length_in_seconds, pace_in_seconds))} laps"
+            f"You'll need {fuel_with_formation_lap}L to cover {ceil(compute_expected_laps(total_race_length_in_seconds, total_pace_pace_in_seconds))} laps"
         )
         fuel_result = (
             f"You should add {fuel_with_formation_lap}L with a formation lap \
@@ -43,20 +65,26 @@ if tool == tools[0]:
         st.text(
             """
             The number of lap is estimated as the length of the stint divided by the average pace, rounded up.
-            The fuel to add is the fuel consumption per lap times the number of expected laps + 2% of uncertainty, rounded up.
+            The fuel to add is the fuel consumption per lap times the number of expected laps + 3% of uncertainty, rounded up.
             An extra lap is added in case of formation lap.
         """
         )
 
 if tool == tools[1]:
-    col1, col2 = st.beta_columns(2)
+    st.write("Race Length")
+    col1, col2, col3 = st.beta_columns(3)
     with col1:
-        race_length = st.number_input(f"Length in hours")
+        race_length_hours = st.number_input(f"hours", key="race-hours", value=0)
     with col2:
+        race_length_minutes = st.number_input(f"minutes", key="race-minutes", value=0)
+    with col3:
+        race_length_seconds = st.number_input(f"seconds", key="race-seconds", value=0)
+    with col1:
         stint_length = st.number_input(
             f"Stint length in minutes", value=0, format="%d", step=1
         )
-    col1, col2, col3 = st.beta_columns(3)
+
+    col1, col2 = st.beta_columns(2)
     with col1:
         fuel_tank_size = st.number_input(
             "Fuel tank size in liters", value=0, format="%d", step=1
@@ -69,81 +97,91 @@ if tool == tools[1]:
         pit_stop_time_lost = st.number_input(
             "Time lost with pit Stop in seconds", value=50, format="%d", step=1
         )
-
-    number_drivers = st.number_input("Number of drivers", value=0, format="%d", step=1)
+        number_drivers = st.number_input(
+            "Number of drivers", value=0, format="%d", step=1
+        )
     drivers = {}
     cols = st.beta_columns(max(number_drivers, 1))
     for i in range(number_drivers):
         with cols[i]:
             name = st.text_input(f"Name of driver {i + 1}")
-            pace = st.number_input(
-                f"Average pace of driver {i + 1} in minutes", step=0.1
-            )
-            drivers[i] = {"name": name, "pace": decrease_time_unit(pace)}
-    drivers_sorted = list(sorted(drivers.keys(), key=lambda x: drivers[x]["pace"]))
+            pace_minutes = st.number_input(f"minutes", key=f"pace-minutes-{i}", value=0)
+            pace_seconds = st.number_input(f"seconds", key=f"pace-seconds-{i}")
+            drivers[i] = {"name": name, "pace": 60 * pace_minutes + pace_seconds}
 
-    if race_length != 0 and fuel_consumption != 0 and pace != 0 and stint_length != 0:
-        race_length_in_seconds = decrease_time_unit(decrease_time_unit(race_length))
+    if (
+        race_length_hours + race_length_minutes + race_length_seconds > 0
+        and fuel_consumption != 0
+        and stint_length != 0
+        and sum([len(d["name"]) > 0 for i, d in drivers.items()]) == len(drivers)
+    ):
+        total_race_length_in_seconds = (
+            3600 * race_length_hours + 60 * race_length_minutes + race_length_seconds
+        )
         max_stint_length_in_seconds = decrease_time_unit(stint_length)
         names = []
         fuels = []
         remaining_times = []
         laps = []
         stint_number = 0
-        remaining_time = race_length_in_seconds
+        remaining_time = total_race_length_in_seconds
         while remaining_time > 0:
-            driver = drivers_sorted[stint_number % len(drivers_sorted)]
-            names.append(drivers[driver]["name"])
+            driver = drivers[stint_number % len(drivers)]
+            names.append(driver["name"])
             race_h, race_m, race_s = second_to_hour_minute_second(
-                race_length_in_seconds
+                total_race_length_in_seconds
             )
             stint_length_in_seconds = (
                 min(
                     max_stint_length_in_seconds - pit_stop_time_lost,
                     (((fuel_tank_size - fuel_consumption) // fuel_consumption) - 1)
-                    * drivers[driver]["pace"]
-                    - pit_stop_time_lost,
+                    * driver["pace"],
                 )
                 if stint_number == 0
                 else min(
                     max_stint_length_in_seconds - pit_stop_time_lost,
-                    ((fuel_tank_size // fuel_consumption) - 1) * drivers[driver]["pace"]
-                    - pit_stop_time_lost,
+                    ((fuel_tank_size // fuel_consumption) - 1) * driver["pace"],
                 )
             )
 
             remaining_time = (
-                race_length_in_seconds
+                total_race_length_in_seconds
                 if stint_number == 0
-                else remaining_times[stint_number - 1] - stint_length_in_seconds
+                else remaining_times[stint_number - 1]
+                - stint_length_in_seconds
+                - pit_stop_time_lost
             )
             remaining_times.append(max(remaining_time, 0))
 
-            fuels.append(
-                compute_fuel_to_add(
-                    stint_length_in_seconds - pit_stop_time_lost,
-                    drivers[driver]["pace"],
-                    fuel_consumption,
-                    formation_lap=True,
-                )
-                if stint_number == 0
-                else compute_fuel_to_add(
-                    min(
+            if stint_number == 0:
+                fuels.append(
+                    compute_fuel_to_add(
                         stint_length_in_seconds - pit_stop_time_lost,
-                        remaining_times[stint_number - 1],
-                    ),
-                    drivers[driver]["pace"],
-                    fuel_consumption,
-                    formation_lap=False,
+                        driver["pace"],
+                        fuel_consumption,
+                        formation_lap=True,
+                    )
                 )
-            )
+            elif remaining_time <= 0:
+                fuels.append(0)
+            else:
+                fuels.append(
+                    compute_fuel_to_add(
+                        min(
+                            stint_length_in_seconds - pit_stop_time_lost,
+                            remaining_times[stint_number - 1],
+                        ),
+                        driver["pace"],
+                        fuel_consumption,
+                        formation_lap=False,
+                    )
+                )
+
             laps.append(
                 0
                 if stint_number == 0
                 else laps[stint_number - 1]
-                + compute_expected_laps(
-                    stint_length_in_seconds, drivers[driver]["pace"]
-                )
+                + compute_expected_laps(stint_length_in_seconds, driver["pace"])
             )
             stint_number += 1
 
@@ -162,7 +200,7 @@ if tool == tools[1]:
         st.write(
             """
             The number of lap is estimated as the length of the stint divided by the average pace, rounded up.
-            The fuel to add is the fuel consumption per lap times the number of expected laps + 2% of uncertainty, rounded up.
+            The fuel to add is the fuel consumption per lap times the number of expected laps + 3% of uncertainty, rounded up.
             An extra lap is added in case of formation lap.
         """
         )

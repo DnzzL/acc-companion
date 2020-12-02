@@ -10,9 +10,9 @@ def compute_fuel_to_add(
 ):
     expected_laps = compute_expected_laps(race_length_in_seconds, pace_in_seconds)
     return ceil(
-        1.02 * fuel_consumption * (expected_laps + 1)
+        1.03 * fuel_consumption * (expected_laps + 1)
         if formation_lap
-        else 1.02 * fuel_consumption * expected_laps
+        else 1.03 * fuel_consumption * expected_laps
     )
 
 
