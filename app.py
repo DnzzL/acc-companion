@@ -108,17 +108,20 @@ if tool == tools[1]:
             pace_minutes = st.number_input(f"minutes", key=f"pace-minutes-{i}", value=0)
             pace_seconds = st.number_input(f"seconds", key=f"pace-seconds-{i}")
             drivers[i] = {"name": name, "pace": 60 * pace_minutes + pace_seconds}
+    driver_orders = st.text_input("Order of drivers, comma separated (i.e 1,1,2,1,2,2)")
+    driver_orders = [int(d) - 1 for d in driver_orders.split(",")]
 
+    total_race_length_in_seconds = (
+        3600 * race_length_hours + 60 * race_length_minutes + race_length_seconds
+    )
+    max_stint_length_in_seconds = decrease_time_unit(stint_length)
     if (
         race_length_hours + race_length_minutes + race_length_seconds > 0
         and fuel_consumption != 0
         and stint_length != 0
         and sum([len(d["name"]) > 0 for i, d in drivers.items()]) == len(drivers)
     ):
-        total_race_length_in_seconds = (
-            3600 * race_length_hours + 60 * race_length_minutes + race_length_seconds
-        )
-        max_stint_length_in_seconds = decrease_time_unit(stint_length)
+
         names = []
         fuels = []
         remaining_times = []
@@ -126,30 +129,27 @@ if tool == tools[1]:
         stint_number = 0
         remaining_time = total_race_length_in_seconds
         while remaining_time > 0:
-            driver = drivers[stint_number % len(drivers)]
+            driver = drivers[driver_orders[stint_number % len(driver_orders)]]
             names.append(driver["name"])
             race_h, race_m, race_s = second_to_hour_minute_second(
                 total_race_length_in_seconds
             )
             stint_length_in_seconds = (
                 min(
-                    max_stint_length_in_seconds - pit_stop_time_lost,
-                    (((fuel_tank_size - fuel_consumption) // fuel_consumption) - 1)
-                    * driver["pace"],
+                    max_stint_length_in_seconds - pit_stop_time_lost - driver["pace"],
+                    ((fuel_tank_size // fuel_consumption) - 3) * driver["pace"],
                 )
                 if stint_number == 0
                 else min(
-                    max_stint_length_in_seconds - pit_stop_time_lost,
-                    ((fuel_tank_size // fuel_consumption) - 1) * driver["pace"],
+                    max_stint_length_in_seconds - pit_stop_time_lost - driver["pace"],
+                    ((fuel_tank_size // fuel_consumption) - 2) * driver["pace"],
                 )
             )
 
             remaining_time = (
                 total_race_length_in_seconds
                 if stint_number == 0
-                else remaining_times[stint_number - 1]
-                - stint_length_in_seconds
-                - pit_stop_time_lost
+                else remaining_times[stint_number - 1] - stint_length_in_seconds
             )
             remaining_times.append(max(remaining_time, 0))
 
